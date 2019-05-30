@@ -8,8 +8,8 @@ PRIMARY = ([255, 0, 0], [0, 255, 0], [0, 0, 255])
 NOCELL = [255, 255, 255]
 BLACK = [0, 0, 0]
 
-GRID_WIDTH = 40 # Number of Cell Columns
-GRID_HEIGHT = 40 # Number of Cell Rows
+GRID_WIDTH = 64 # Number of Cell Columns
+GRID_HEIGHT = 48 # Number of Cell Rows
 
 CELL_SIZE = 20 # Cell Dimensions in Pixels
 
@@ -27,12 +27,16 @@ def run():
     generation_number = 0 # Keeps Track of Current Generation
     last_generation = time.get_ticks()
     running = True
+    paused = False
     while running:
         for i in event.get():
             if (i.type == QUIT):
                 running = False
             elif (i.type == KEYDOWN):
                 print (i.key)
+                if (i.key == 112): # p
+                    paused = not paused
+                    print ("Toggle Pause...")
                 if (i.key == 273): # UP
                     generation_speed_select = min(generation_speed_select + 1, len(GENERATION_SPEED) - 1)
                     print("Generation Speed Set To: {}ms".format(GENERATION_SPEED[generation_speed_select]))
@@ -47,20 +51,19 @@ def run():
                     print ("Toggling Color...")
                     color = not color
                     randomizeCells(color)
-
                 if (i.key == 110): # n
                     print ("Adding Noise...")
                     addNoise()
                     
 
         # Wait for Next Generation
-        if (time.get_ticks() - last_generation >= GENERATION_SPEED[generation_speed_select]): 
-            print("Generation: {}".format(generation_number))
+        if (not paused and time.get_ticks() - last_generation >= GENERATION_SPEED[generation_speed_select]): 
 
             # Graphics
             screen.fill(NOCELL)
             drawGrid()
             drawCells()
+            drawStatus(generation_number)
             display.update()
 
             evolve()
@@ -143,18 +146,29 @@ def countNeighbors(x, y):
         color_ave = NOCELL
     return neighbors, color_ave
 
+def drawStatus(generation_number):
+    text_generation = font.render('Generation: {}'.format(generation_number), False, (0, 0, 0))
+    screen.blit(text_generation, (0, 0))
+
+    text_width, text_height = font.size('Generation: {}'.format(generation_number))
+
+    text_speed = font.render('Speed: {}'.format(GENERATION_SPEED[generation_speed_select]), False, (0, 0, 0))
+
+    screen.blit(text_speed, (text_width + 50, 0))
+
+
 def drawCells():
     for y in range(GRID_HEIGHT):
         for x in range(GRID_WIDTH):
-            rect = Rect(x * CELL_SIZE + 1, y * CELL_SIZE + 1, CELL_SIZE - 1, CELL_SIZE - 1)
+            rect = Rect(x * CELL_SIZE + 1, STATUS_HEIGHT + y * CELL_SIZE + 1, CELL_SIZE - 1, CELL_SIZE - 1)
             draw.rect(screen, cells[y][x], rect, 0)
 
 def drawGrid():
     for x in range(GRID_WIDTH):
-        draw.line(screen, BLACK, (int(x * CELL_SIZE), 0), (int(x * CELL_SIZE), screen_size[1]), 1)
+        draw.line(screen, BLACK, (int(x * CELL_SIZE), STATUS_HEIGHT), (int(x * CELL_SIZE), screen_size[1]), 1)
 
     for y in range(GRID_HEIGHT):
-        draw.line(screen, BLACK, (0, int(y * CELL_SIZE)), (screen_size[0], int(y * CELL_SIZE)), 1)
+        draw.line(screen, BLACK, (0, STATUS_HEIGHT + int(y * CELL_SIZE)), (screen_size[0], STATUS_HEIGHT + int(y * CELL_SIZE)), 1)
 
 def addNoise():
     global cells
@@ -195,9 +209,10 @@ def shallow_copy(arr2d):
 
     
 if __name__ == "__main__":
-    global screen, screen_size
+    global screen, screen_size, font
 
     init()
+    font = font.SysFont('Comic Sans MS', 30)
 
     # Initialize Display Window
     screen_size = (GRID_WIDTH * CELL_SIZE, GRID_HEIGHT * CELL_SIZE + STATUS_HEIGHT)
